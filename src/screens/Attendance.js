@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, Alert } from 'react-native';
-import { useStore } from './store';
-import { Btn, Chip, Field, H, Row, C, DAYS, sessionLabel } from './ui';
-
-const iso = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+import { useStore } from '../context/store';
+import { useAuth } from '../context/AuthContext';
+import { Btn, Chip, Field, H, Row, C, DAYS, sessionLabel, isoDate as iso, hhmm } from '../components/ui';
 
 export default function Attendance() {
   const { data, save } = useStore();
+  const { user } = useAuth();
   const today = new Date();
   const date = iso(today);
   const todays = data.sessions.filter((s) => s.active && s.day === today.getDay()).sort((a, b) => a.start.localeCompare(b.start));
@@ -17,7 +17,7 @@ export default function Attendance() {
   const open = (s) => {
     const ex = data.attendances.find((a) => a.id === `${s.id}_${date}`);
     setSid(s.id);
-    setForm(ex ? { ...ex } : { start: s.start, end: s.end, teacherIds: [], volunteerIds: [], marks: {} });
+    setForm(ex ? { ...ex } : { start: s.start, end: s.end, teacherIds: [user.id], volunteerIds: [], marks: {} });
   };
   if (session && !form) open(session);
 
@@ -39,17 +39,41 @@ export default function Attendance() {
   const toggle = (key, id) => setForm({ ...form, [key]: form[key].includes(id) ? form[key].filter((x) => x !== id) : [...form[key], id] });
   const info = (s) => Alert.alert(s.name, [s.notes, s.allergies && `Alergias/medicações: ${s.allergies}`, s.emergency && `Emergência: ${s.emergency}`].filter(Boolean).join('\n\n'));
   const present = students.filter((s) => form.marks[s.id]?.present).length;
+  const byOther = !!form.savedAt && form.savedBy !== user.id;
 
-  const finish = () => {
-    save('attendances', `${session.id}_${date}`, { start: form.start, end: form.end, teacherIds: form.teacherIds, volunteerIds: form.volunteerIds }, { sessionId: session.id, date, marks: form.marks });
+  const doSave = () => {
+    // A chamada da sessão/dia é UMA só: o que for salvo agora substitui a anterior por inteiro.
+    save('attendances', `${session.id}_${date}`, {
+      sessionId: session.id, date,
+      start: form.start, end: form.end,
+      teacherIds: form.teacherIds, volunteerIds: form.volunteerIds,
+      marks: form.marks,
+      savedBy: user.id, savedByName: user.name, savedAt: Date.now(),
+    });
     Alert.alert('Chamada salva');
     setSid(null); setForm(null);
+  };
+  const finish = () => {
+    if (!byOther) return doSave();
+    Alert.alert('Substituir chamada?', `A chamada de ${form.savedByName} (${hhmm(form.savedAt)}) será substituída pela sua.`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Substituir', style: 'destructive', onPress: doSave },
+    ]);
   };
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }}>
       <H>{sessionLabel(session).replace(` · ${DAYS[session.day]}`, '')}</H>
       <Text style={{ color: C.mut }}>{present} presentes de {students.length}</Text>
+      {!!form.savedAt && (
+        <View style={{ backgroundColor: '#FFF4D6', borderRadius: 12, padding: 12, marginTop: 10 }}>
+          <Text style={{ color: C.ink }}>
+            {byOther
+              ? `Chamada já feita por ${form.savedByName} às ${hhmm(form.savedAt)}. Se você salvar, ela será substituída.`
+              : `Você já salvou esta chamada às ${hhmm(form.savedAt)}. Ao salvar de novo, ela será atualizada.`}
+          </Text>
+        </View>
+      )}
       {students.length === 0 && <Text style={{ marginTop: 12 }}>Nenhum aluno vinculado a esta sessão. Vincule no cadastro do aluno.</Text>}
       {students.map((s) => {
         const m = form.marks[s.id];

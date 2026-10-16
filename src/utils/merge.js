@@ -9,14 +9,14 @@ export function mergeRecord(a, b) {
   }
   return out;
 }
-// Chamadas: as marcações de presença são mescladas ALUNO a ALUNO (vale a mais recente).
+// Chamadas: vale a ÚLTIMA chamada salva, inteira (savedAt). Não mistura marcações de professores diferentes.
 export function mergeAttendance(a, b) {
-  const out = mergeRecord(a, b);
-  const marks = { ...(a?.marks || {}) };
-  for (const [id, m] of Object.entries(b?.marks || {})) {
-    if (!marks[id] || m.t > marks[id].t) marks[id] = m;
-  }
-  return { ...out, marks };
+  if (!a) return b;
+  if (!b) return a;
+  const ta = a.savedAt || 0;
+  const tb = b.savedAt || 0;
+  if (tb !== ta) return tb > ta ? b : a;
+  return String(b.savedBy || '') > String(a.savedBy || '') ? b : a; // desempate estável
 }
 export function mergeCollection(local = [], remote = [], fn = mergeRecord) {
   const map = new Map(local.map((r) => [r.id, r]));

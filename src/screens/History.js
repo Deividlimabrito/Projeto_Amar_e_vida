@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ScrollView, View, Text } from 'react-native';
-import { useStore } from './store';
-import { Btn, Chip, H, Row, C, sessionLabel } from './ui';
+import { useStore } from '../context/store';
+import { Btn, Chip, H, Row, C, sessionLabel, hhmm } from '../components/ui';
 
 export default function History() {
   const { data } = useStore();
@@ -34,6 +34,7 @@ export default function History() {
                 <Text style={{ color: C.ok }}>Presentes ({marks.filter(([, m]) => m.present).length}): {marks.filter(([, m]) => m.present).map(([i]) => nm(i)).join(', ') || '—'}</Text>
                 <Text style={{ color: C.no }}>Faltas: {marks.filter(([, m]) => !m.present).map(([i]) => nm(i)).join(', ') || '—'}</Text>
                 <Text style={{ color: C.mut }}>Professor(es): {name('teachers', a.teacherIds)} · Voluntários: {name('volunteers', a.volunteerIds)}</Text>
+                {!!a.savedAt && <Text style={{ color: C.mut }}>Chamada feita por {a.savedByName || '—'} às {hhmm(a.savedAt)}</Text>}
               </View>
             );
           })}

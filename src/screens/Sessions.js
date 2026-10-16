@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
-import { useStore } from './store';
-import { Btn, Chip, Field, H, Row, C, DAYS, SPORTS, sessionLabel } from './ui';
+import { useStore, sessionId } from '../context/store';
+import { Btn, Chip, Field, H, Row, C, DAYS, SPORTS, sessionLabel } from '../components/ui';
 
 export default function Sessions() {
   const { data, save, setActive } = useStore();
@@ -13,8 +13,9 @@ export default function Sessions() {
     const toggleDay = (d) => set({ days: editing ? [d] : f.days.includes(d) ? f.days.filter((x) => x !== d) : [...f.days, d] });
     const ok = f.sport && f.days.length && /^\d\d:\d\d$/.test(f.start) && /^\d\d:\d\d$/.test(f.end);
     const submit = () => {
+      // Sessão nova ganha ID fixo (ex.: surfe-qua-0900), igual em todos os aparelhos.
       f.days.forEach((d) =>
-        save('sessions', editing ? f.id : undefined, { sport: f.sport, day: d, start: f.start, end: f.end, note: f.note, ...(editing ? {} : { active: true }) })
+        save('sessions', editing ? f.id : sessionId(f.sport, d, f.start), { sport: f.sport, day: d, start: f.start, end: f.end, note: f.note, ...(editing ? {} : { active: true }) })
       );
       setF(null);
     };

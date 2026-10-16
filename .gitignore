@@ -1,1 +1,13 @@
-node_modules
+node_modules/
+.expo/
+dist/
+web-build/
+*.apk
+*.aab
+*.jks
+*.p12
+*.key
+.env
+.env.*
+*.log
+.DS_Store
