@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ScrollView, View, Text } from 'react-native';
 import { useStore } from '../context/store';
 import { Btn, Chip, H, Row, C, sessionLabel, hhmm } from '../components/ui';
+import { generateAttendancePDF, generateMonthlyHistoryPDF } from '../utils/pdfGenerator';
 
 export default function History() {
   const { data } = useStore();
@@ -12,6 +13,11 @@ export default function History() {
   const shift = (d) => { const x = new Date(ym.y, ym.m + d, 1); setYm({ y: x.getFullYear(), m: x.getMonth() }); };
   const list = data.attendances.filter((a) => a.sessionId === sid && a.date.startsWith(key)).sort((a, b) => a.date.localeCompare(b.date));
   const name = (coll, ids = []) => ids.map((i) => data[coll].find((p) => p.id === i)?.name).filter(Boolean).join(', ') || '—';
+
+  // PDF: trava o botão enquanto gera, para não abrir o compartilhamento duas vezes.
+  const [busy, setBusy] = useState(false);
+  const session = data.sessions.find((s) => s.id === sid);
+  const share = async (fn) => { if (busy) return; setBusy(true); await fn(); setBusy(false); };
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }}>
@@ -25,6 +31,10 @@ export default function History() {
             <Btn t="›" outline onPress={() => shift(1)} />
           </Row>
           {list.length === 0 && <Text style={{ color: C.mut }}>Nenhuma chamada neste mês.</Text>}
+          {list.length > 0 && (
+            <Btn t={busy ? 'Gerando PDF…' : 'PDF do mês'} disabled={busy}
+              onPress={() => share(() => generateMonthlyHistoryPDF({ session, year: ym.y, month: ym.m, attendances: list, data }))} />
+          )}
           {list.map((a) => {
             const marks = Object.entries(a.marks || {});
             const nm = (id) => data.students.find((s) => s.id === id)?.name || '?';
@@ -35,6 +45,7 @@ export default function History() {
                 <Text style={{ color: C.no }}>Faltas: {marks.filter(([, m]) => !m.present).map(([i]) => nm(i)).join(', ') || '—'}</Text>
                 <Text style={{ color: C.mut }}>Professor(es): {name('teachers', a.teacherIds)} · Voluntários: {name('volunteers', a.volunteerIds)}</Text>
                 {!!a.savedAt && <Text style={{ color: C.mut }}>Chamada feita por {a.savedByName || '—'} às {hhmm(a.savedAt)}</Text>}
+                <Btn t="PDF desta chamada" outline disabled={busy} onPress={() => share(() => generateAttendancePDF({ session, attendance: a, data }))} />
               </View>
             );
           })}

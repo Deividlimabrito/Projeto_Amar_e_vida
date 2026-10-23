@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "A Maré Vida",
-    "slug": "felipe-a-mare-vida",
+    "slug": "felipe-a-mare-vida-v2",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,10 +13,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "br.com.marevida.app"
+      "bundleIdentifier": "br.com.marevida.appv2"
     },
     "android": {
-      "package": "br.com.marevida.app",
+      "package": "br.com.marevida.appv2",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FDC93B"
@@ -25,11 +25,14 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "owner": "felipe-a-mare-vida",
+    "plugins": [
+      "expo-sharing"
+    ],
     "extra": {
       "eas": {
-        "projectId": "d1ed9850-1c03-4958-81f2-acdda165a29f"
+        "projectId": "d7f89e20-f0b1-4f01-a75a-df76fd6abd8e"
       }
-    },
-    "owner": "felipe-a-mare-vida"
+    }
   }
 }

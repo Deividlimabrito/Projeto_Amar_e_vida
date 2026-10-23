@@ -6,7 +6,7 @@ import { Btn, Chip, Field, H, Row, C, sessionLabel, maskPhone } from '../compone
 import { isEmail, normEmail } from '../utils/validators';
 
 const KINDS = {
-  students: { title: 'Aluno', fields: [['name', 'Nome'], ['guardian', 'Responsável'], ['phone', 'Telefone do responsável'], ['allergies', 'Alergias e medicações'], ['emergency', 'Contato de emergência'], ['notes', 'Observações importantes (diagnóstico, comunicação, o que ajuda)']] },
+  students: { title: 'Aluno', fields: [['name', 'Nome'], ['guardian', 'Responsável'], ['phone', 'Telefone do responsável'], ['allergies', 'Alergias e medicações'], ['emergency', 'Outro contato, se o responsável não atender (opcional)'], ['notes', 'Observações importantes (diagnóstico, comunicação, o que ajuda)']] },
   teachers: { title: 'Professor', fields: [['name', 'Nome'], ['email', 'E-mail'], ['phone', 'Telefone']] },
   volunteers: { title: 'Voluntário', fields: [['name', 'Nome'], ['phone', 'Telefone']] },
 };
