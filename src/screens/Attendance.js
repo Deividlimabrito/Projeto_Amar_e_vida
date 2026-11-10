@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, Alert } from 'react-native';
 import { useStore } from '../context/store';
 import { useAuth } from '../context/AuthContext';
-import { Btn, Chip, Field, H, Row, C, DAYS, sessionLabel, isoDate as iso, hhmm } from '../components/ui';
+import { Btn, Chip, Field, H, Link, Row, C, DAYS, sessionLabel, isoDate as iso, hhmm } from '../components/ui';
 import { generateAttendancePDF } from '../utils/pdfGenerator';
+
+const FULL_DAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
 export default function Attendance() {
   const { data, save } = useStore();
@@ -14,7 +16,10 @@ export default function Attendance() {
   const [sid, setSid] = useState(null);
   const [form, setForm] = useState(null);
   const [pdfBusy, setPdfBusy] = useState(false);
-  const session = data.sessions.find((s) => s.id === (sid || (todays.length === 1 ? todays[0].id : null)));
+  const [linking, setLinking] = useState(false); // lista para vincular alunos à turma
+  // A chamada é sempre do dia de hoje; a data aparece no topo para não haver dúvida.
+  const dateLabel = `${FULL_DAYS[today.getDay()]}, ${date.split('-').reverse().join('/')}`;
+  const session =data.sessions.find((s) => s.id === (sid || (todays.length === 1 ? todays[0].id : null)));
 
   const open = (s) => {
     const ex = data.attendances.find((a) => a.id === `${s.id}_${date}`);
@@ -27,7 +32,7 @@ export default function Attendance() {
     return (
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <H>Chamada do Dia</H>
-        <Text style={{ color: C.mut }}>{DAYS[today.getDay()]}, {date.split('-').reverse().join('/')}</Text>
+        <Text style={{ color: C.mut }}>{dateLabel}</Text>
         {todays.length === 0 && <Text style={{ marginTop: 16, color: C.ink }}>Não há sessões ativas para hoje. Cadastre em Sessões.</Text>}
         {todays.length > 1 && <Text style={{ marginTop: 12, color: C.ink }}>Qual sessão?</Text>}
         {todays.map((s) => <Btn key={s.id} t={`${s.sport} · ${s.start}–${s.end}${s.note ? ' · ' + s.note : ''}`} onPress={() => open(s)} />)}
@@ -40,6 +45,12 @@ export default function Attendance() {
   const mark = (id, present) => setForm({ ...form, marks: { ...form.marks, [id]: { present, t: Date.now() } } });
   const toggle = (key, id) => setForm({ ...form, [key]: form[key].includes(id) ? form[key].filter((x) => x !== id) : [...form[key], id] });
   const info = (s) => Alert.alert(s.name, [s.notes, s.allergies && `Alergias/medicações: ${s.allergies}`, (s.guardian || s.phone) && `Responsável: ${[s.guardian, s.phone].filter(Boolean).join(' · ')}`, s.emergency && `Outro contato: ${s.emergency}`].filter(Boolean).join('\n\n'));
+  // Vincular alunos direto daqui (atalho para o cadastro em Pessoas).
+  const allStudents = data.students.filter((s) => s.active).sort((a, b) => a.name.localeCompare(b.name));
+  const inSession = (s) => (s.sessionIds || []).includes(session.id);
+  const toggleStudent = (s) => save('students', s.id, {
+    sessionIds: inSession(s) ? s.sessionIds.filter((x) => x !== session.id) : [...(s.sessionIds || []), session.id],
+  });
   const present = students.filter((s) => form.marks[s.id]?.present).length;
   const byOther = !!form.savedAt && form.savedBy !== user.id;
 
@@ -73,6 +84,7 @@ export default function Attendance() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }}>
+      <Text style={{ color: C.pri, fontWeight: '800', marginTop: 4 }}>{dateLabel}</Text>
       <H>{sessionLabel(session).replace(` · ${DAYS[session.day]}`, '')}</H>
       <Text style={{ color: C.mut }}>{present} presentes de {students.length}</Text>
       {!!form.savedAt && (
@@ -84,18 +96,34 @@ export default function Attendance() {
           </Text>
         </View>
       )}
-      {students.length === 0 && <Text style={{ marginTop: 12 }}>Nenhum aluno vinculado a esta sessão. Vincule no cadastro do aluno.</Text>}
+      {students.length === 0 && !linking && (
+        <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginTop: 10 }}>
+          <Text style={{ color: C.ink }}>Nenhum aluno nesta turma ainda.</Text>
+          <Btn t="Vincular alunos a esta turma" onPress={() => setLinking(true)} />
+        </View>
+      )}
+      {linking && (
+        <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginTop: 10 }}>
+          <Text style={{ fontWeight: '800', color: C.ink }}>Quem faz parte desta turma?</Text>
+          <Text style={{ color: C.mut, marginBottom: 4 }}>Toque para incluir ou tirar. Fica salvo no cadastro do aluno.</Text>
+          {allStudents.length === 0
+            ? <Text style={{ color: C.ink, marginTop: 6 }}>Nenhum aluno cadastrado. Cadastre primeiro na aba Pessoas.</Text>
+            : <Row>{allStudents.map((s) => <Chip key={s.id} t={s.name} on={inSession(s)} onPress={() => toggleStudent(s)} />)}</Row>}
+          <Btn t="Pronto" outline onPress={() => setLinking(false)} />
+        </View>
+      )}
       {students.map((s) => {
         const m = form.marks[s.id];
         return (
           <View key={s.id} style={{ backgroundColor: '#fff', borderRadius: 12, padding: 10, marginTop: 8, flexDirection: 'row', alignItems: 'center' }}>
             <Text style={{ flex: 1, fontSize: 16, color: C.ink }}>{s.name}</Text>
-            {(s.notes || s.allergies || s.emergency || s.guardian || s.phone) && <TouchableOpacity onPress={() => info(s)}><Text style={{ fontSize: 22, marginRight: 10 }}>ℹ️</Text></TouchableOpacity>}
+            {!!(s.notes || s.allergies || s.emergency || s.guardian || s.phone) && <TouchableOpacity onPress={() => info(s)}><Text style={{ fontSize: 22, marginRight: 10 }}>ℹ️</Text></TouchableOpacity>}
             <TouchableOpacity onPress={() => mark(s.id, true)} style={{ padding: 10, borderRadius: 10, backgroundColor: m?.present === true ? C.ok : '#E6EEF0', marginRight: 6 }}><Text style={{ fontWeight: '800', color: m?.present === true ? '#fff' : C.mut }}>Presente</Text></TouchableOpacity>
             <TouchableOpacity onPress={() => mark(s.id, false)} style={{ padding: 10, borderRadius: 10, backgroundColor: m?.present === false ? C.no : '#E6EEF0' }}><Text style={{ fontWeight: '800', color: m?.present === false ? '#fff' : C.mut }}>Falta</Text></TouchableOpacity>
           </View>
         );
       })}
+      {students.length > 0 && !linking && <Link t="+ Vincular mais alunos a esta turma" onPress={() => setLinking(true)} />}
       <Row style={{ marginTop: 12 }}>
         <View style={{ flex: 1, marginRight: 6 }}><Field label="Início da aula" value={form.start} onChangeText={(v) => setForm({ ...form, start: v })} /></View>
         <View style={{ flex: 1 }}><Field label="Fim da aula" value={form.end} onChangeText={(v) => setForm({ ...form, end: v })} /></View>
@@ -106,7 +134,7 @@ export default function Attendance() {
       <Row>{data.volunteers.filter((t) => t.active).map((t) => <Chip key={t.id} t={t.name} on={form.volunteerIds.includes(t.id)} onPress={() => toggle('volunteerIds', t.id)} />)}</Row>
       <Btn t="Salvar chamada" onPress={finish} />
       <Btn t={pdfBusy ? 'Gerando PDF…' : 'Gerar PDF da chamada'} outline disabled={pdfBusy} onPress={exportPdf} />
-      <Btn t="Voltar" outline onPress={() => { setSid(null); setForm(null); }} />
+      <Btn t="Voltar" outline onPress={() => { setSid(null); setForm(null); setLinking(false); }} />
     </ScrollView>
   );
 }
