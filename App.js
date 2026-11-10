@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StoreProvider } from './src/context/store';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { SyncProvider } from './src/context/SyncContext';
+import SyncBadge from './src/components/SyncBadge';
 import Login from './src/screens/Login';
 import ChangePassword from './src/screens/ChangePassword';
 import Attendance from './src/screens/Attendance';
@@ -35,6 +37,7 @@ function Root() {
         <TouchableOpacity onPress={() => setChanging(true)} style={{ padding: 8 }}><Text style={{ fontWeight: '700', color: C.ink }}>Senha</Text></TouchableOpacity>
         <TouchableOpacity onPress={confirmLogout} style={{ padding: 8 }}><Text style={{ fontWeight: '700', color: C.ink }}>Sair</Text></TouchableOpacity>
       </View>
+      <SyncBadge />
       {changing ? (
         <View style={{ flex: 1 }}><ChangePassword onClose={() => setChanging(false)} /></View>
       ) : (
@@ -57,11 +60,13 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StoreProvider>
-        <AuthProvider>
-          <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
-            <Root />
-          </SafeAreaView>
-        </AuthProvider>
+        <SyncProvider>
+          <AuthProvider>
+            <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+              <Root />
+            </SafeAreaView>
+          </AuthProvider>
+        </SyncProvider>
       </StoreProvider>
     </SafeAreaProvider>
   );

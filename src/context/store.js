@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { mergeData } from '../utils/merge';
 
 // v2: IDs fixos de sessão + chamada com autoria.
 // Os dados de teste da v1 ficam de lado (não são apagados, só não são mais lidos).
@@ -55,6 +56,9 @@ export function StoreProvider({ children }) {
   };
   // Nada é apagado: só marcado como inativo.
   const setActive = (coll, id, active) => save(coll, id, { active });
+  // Junta dados vindos da nuvem com os locais. Usa merge (e não substituição) para não perder
+  // algo que o professor tenha salvo enquanto a sincronização estava em andamento.
+  const absorb = useCallback((incoming) => setData((d) => mergeData(d, incoming)), []);
   if (!data) return null;
-  return <Ctx.Provider value={{ data, save, setActive }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ data, save, setActive, absorb }}>{children}</Ctx.Provider>;
 }
