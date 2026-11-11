@@ -30,6 +30,9 @@
         "projectId": "d1ed9850-1c03-4958-81f2-acdda165a29f"
       }
     },
-    "owner": "felipe-a-mare-vida"
+    "owner": "felipe-a-mare-vida",
+    "plugins": [
+      "expo-sharing"
+    ]
   }
 }
